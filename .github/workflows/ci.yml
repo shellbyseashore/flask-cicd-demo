@@ -67,4 +67,3 @@ jobs:
               --restart always \
               -p 5000:5000 \
               ${{ secrets.DOCKER_USERNAME }}/flask-cicd-demo:latest
- 
