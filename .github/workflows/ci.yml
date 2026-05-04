@@ -27,3 +27,44 @@ jobs:
       - name: Run tests
         run: |
           python -m pytest tests/test_main.py -v
+  docker:
+    runs-on: ubuntu-latest
+    needs: test
+ 
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+ 
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+ 
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: ${{ secrets.DOCKER_USERNAME }}/flask-cicd-demo:latest
+  deploy:
+    runs-on: ubuntu-latest
+    needs: docker
+ 
+    steps:
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            docker pull ${{ secrets.DOCKER_USERNAME }}/flask-cicd-demo:latest
+            docker stop flask-app || true
+            docker rm flask-app || true
+            docker run -d \
+              --name flask-app \
+              --restart always \
+              -p 5000:5000 \
+              ${{ secrets.DOCKER_USERNAME }}/flask-cicd-demo:latest
+ 
